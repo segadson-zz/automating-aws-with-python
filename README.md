@@ -7,3 +7,5 @@ Webotron currently has the following features
 - List features
 - list bucket list_buckets_objects
 Python Class
+
+-Create and setup website bucket 
