@@ -8,4 +8,5 @@ Webotron currently has the following features
 - list bucket list_buckets_objects
 Python Class
 
--Create and setup website bucket 
+-Create and setup website bucket
+- Sync directory
