@@ -10,3 +10,4 @@ Python Class
 
 -Create and setup website bucket
 - Sync directory
+*** Refactored***
