@@ -20,7 +20,7 @@ bucket = None
 
 @click.group()
 @click.option('--profile', default='pythonAutomation',
-help="Use a given AWS profile")
+              help="Use a given AWS profile")
 def cli(profile):
     """We3botron deploys websites to AWS"""
     # makes the varibles session and
@@ -28,7 +28,7 @@ def cli(profile):
     global session, bucket_manager
 
     # creating session dictionary
-    session_cfg={}
+    session_cfg = {}
     if profile:
         session_cfg['profile_name'] = profile
     # create Session

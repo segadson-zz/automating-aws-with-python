@@ -1,31 +1,43 @@
 # -*- coding: utf-8 -*-
 from pathlib import Path
 import mimetypes
+from functools import reduce
 
 from botocore.exceptions import ClientError
 
+from hashlib import md5
 import util
 
 """Classes for S3 Bucket"""
 
 class BucketManager:
     """Manage an S3 Bucket."""
-
+    CHUNK_SIZE = 8388608
     def __init__(self, session):
         """Create a BucketManager Object."""
         # session = boto3.Session(profile_name='pythonAutomation')
         # s3 = session.resource('s3')
+        self.session = session
         self.s3 = session.resource('s3')
+        self.transfer_config = boto3.s3.transfer.TransferConfig(
+        multipart_chunksize=self.CHUNK_SIZE,
+        multipart_threshold=self.CHUNK_SIZE
+        )
+        self.manifest = {}
+
     def get_region_name(self, bucket):
-        """Get Bucket Region Name"""
-        bucket_location = self.s3.meta.client.get_bucket_location(Bucket=bucket.name)
-        return bucket_location["LocationConstraint"] or 'us-east-1'
+    	"""Get the bucket's region name."""
+    	client = self.s3.meta.client
+    	bucket_location = client.get_bucket_location(Bucket=bucket.name)
+    	return bucket_location["LocationConstraint"] or 'us-east-1'
 
     def get_bucket_url(self, bucket):
-        """Get Bucket Website URL"""
-        return "http://{}.{}".format(bucket.name, # formating the string
-        util.get_endpoint(self.get_region_name(bucket)).host)
-        
+    	"""Get the website URL for this bucket."""
+    	return "http://{}.{}".format(
+    		bucket.name,
+    		util.get_endpoint(self.get_region_name(bucket)).host
+    		)
+
     def all_buckets(self):
         """Get an iterator for all buckets"""
         return self.s3.buckets.all()
@@ -37,9 +49,9 @@ class BucketManager:
         # s3.Bucket(bucket).objects.all():
 
     def init_bucket(self, bucket_name):
+    """Create new bucket, or return existing one by name."""
 
-    	"""Create new bucket, or return existing one by name."""
-    	s3_bucket = None
+        s3_bucket = None
     	try:
     		s3_bucket = self.s3.create_bucket(
     			Bucket=bucket_name,
@@ -87,18 +99,63 @@ class BucketManager:
                 {'Suffix': 'index.html'
                 }})
 
+    def load_manifest(self, bucket):
+        """Load Manifest caching purposes"""
+        paginator = self.s3.meta.client.get_paginator('list_objects_v2')
+        for page in paginator.paginate(Bucket=bucket.name):
+                for obj in page.get('Contents', []):
+                    self.manifest[obj['Key']] = obj['ETag']
+                    print(obj)
+    @staticmethod
+    def hash_data(data):
+        """Generate md5 hash for data"""
+        hash = md5()
+        hash.update(data)
+
+        return hash
+
+    def gen_etag(self, path):
+    	"""Generate etag for file."""
+    	hashes = []
+
+        with open(path, 'rb') as f:
+    		while True:
+    			data = f.read(self.CHUNK_SIZE)
+
+        		if not data:
+    				break
+
+        		hashes.append(self.hash_data(data))
+
+        if not hashes:
+    		return #if emppyt
+    	elif len(hashes) == 1:
+    		return '"{}"'.format(hashes[0].hexdigest())#if single
+    	else:
+    		hash = self.hash_data(reduce(lambda x, y: x + y, (h.digest() for h in hashes)))
+    		return '"{}-{}"'.format(hash.hexdigest(), len(hashes))
+
     @staticmethod
     def upload_file(bucket, path, key):
         content_type = mimetypes.guess_type(key)[0] or 'text/plain'
+
+        etag = self.gen_etag(path)
+        if self.manifest.get(key, '') == etag:
+            print("Skipping {}, etags match".format(key))
+            return
+
         return bucket.upload_file(
             path,
             key,
             ExtraArgs={
                 'ContentType': content_type
-            })
+            },
+            Config=self.transfer_config
+            )
 
     def sync(self, pathname, bucket_name):
         bucket = self.s3.Bucket(bucket_name)
+        self.load_manifest(bucket_name)
 
         root = Path(pathname).expanduser().resolve()
 
