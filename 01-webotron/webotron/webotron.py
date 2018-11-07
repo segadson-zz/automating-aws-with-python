@@ -19,7 +19,7 @@ session = None
 bucket = None
 
 @click.group()
-@click.option('--option', default=None,
+@click.option('--profile', default='pythonAutomation',
 help="Use a given AWS profile")
 def cli(profile):
     """We3botron deploys websites to AWS"""
@@ -72,6 +72,7 @@ def setup_bucket(bucket):
 def sync(pathname, bucket):
     """Sync Contents of PATHNAME to Bucket"""
     bucket_manager.sync(pathname, bucket)
+    print(bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucket)))
 
 
 if __name__ == '__main__':

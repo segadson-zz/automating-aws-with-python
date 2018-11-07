@@ -12,3 +12,4 @@ Python Class
 - Sync directory
 *** Refactored***
 - Set AWS profile with --profile
+- Print out of S3 bucket websites
