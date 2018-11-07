@@ -11,3 +11,4 @@ Python Class
 -Create and setup website bucket
 - Sync directory
 *** Refactored***
+- Set AWS profile with --profile

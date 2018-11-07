@@ -15,10 +15,28 @@ session = boto3.Session(profile_name='pythonAutomation')
 bucket_manager = BucketManager(session)
 # s3 = session.resource('s3') Bucket Manager will hold the S3 Resource
 
+session = None
+bucket = None
 
 @click.group()
-def cli():
+@click.option('--option', default=None,
+help="Use a given AWS profile")
+def cli(profile):
     """We3botron deploys websites to AWS"""
+    # makes the varibles session and
+    #bucket_manager available in all parts of the script
+    global session, bucket_manager
+
+    # creating session dictionary
+    session_cfg={}
+    if profile:
+        session_cfg['profile_name'] = profile
+    # create Session
+    # profile_name='pythonAutomation'
+    session = boto3.Session(**session_cfg)
+    # ** function wrapper will unrole the diction that was created above
+    bucket_manager = BucketManager(session)
+    # s3 = session.resource('s3') Bucket Manager will hold the S3 Resource
     pass
 
 
